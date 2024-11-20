@@ -253,17 +253,6 @@ export class HomeWebviewProvider implements WebviewProvider<State, State, HomeWe
 		return Promise.resolve();
 	}
 
-	private async pull() {
-		const repo = this.getSelectedRepository();
-		if (repo) {
-			return executeGitCommand({
-				command: 'pull',
-				state: { repos: [repo] },
-			});
-		}
-		return Promise.resolve();
-	}
-
 	registerCommands(): Disposable[] {
 		return [
 			registerCommand(`${this.host.id}.pull`, this.pull, this),
@@ -299,9 +288,11 @@ export class HomeWebviewProvider implements WebviewProvider<State, State, HomeWe
 			registerCommand('gitlens.home.openPullRequestOnRemote', this.pullRequestViewOnRemote, this),
 			registerCommand('gitlens.home.openPullRequestDetails', this.pullRequestDetails, this),
 			registerCommand('gitlens.home.createPullRequest', this.pullRequestCreate, this),
-			registerCommand('gitlens.home.openWorktree', this.worktreeOpen, this),
+			registerCommand('gitlens.home.openWorktree', this.worktreeOpen.bind(this, false), this),
+			registerCommand('gitlens.home.openWorktreeInNewWindow', this.worktreeOpen.bind(this, true), this),
 			registerCommand('gitlens.home.switchToBranch', this.switchToBranch, this),
 			registerCommand('gitlens.home.fetch', this.fetch, this),
+			registerCommand('gitlens.home.pull', this.pull, this),
 			registerCommand('gitlens.home.openInGraph', this.openInGraph, this),
 			registerCommand('gitlens.home.createBranch', this.createBranch, this),
 			registerCommand('gitlens.home.mergeIntoCurrent', this.mergeIntoCurrent, this),
@@ -1095,11 +1086,11 @@ export class HomeWebviewProvider implements WebviewProvider<State, State, HomeWe
 		});
 	}
 
-	private worktreeOpen(ref: BranchRef) {
+	private worktreeOpen(newWindow: boolean, ref: BranchRef) {
 		const worktree = this.findWorktree(ref);
 		if (worktree == null) return;
 
-		openWorkspace(worktree.uri);
+		openWorkspace(worktree.uri, { location: newWindow ? 'newWindow' : 'currentWindow' });
 	}
 
 	private switchToBranch(ref: BranchRef) {
@@ -1127,6 +1118,14 @@ export class HomeWebviewProvider implements WebviewProvider<State, State, HomeWe
 		if (branch == null) return;
 
 		void RepoActions.fetch(repoInfo.repo, getReferenceFromBranch(branch));
+	}
+
+	private pull(ref: BranchRef) {
+		const repo = this._repositoryBranches.get(ref.repoPath);
+		const branch = repo?.branches.find(b => b.id === ref.branchId);
+		if (branch == null) return;
+
+		void RepoActions.pull(repo!.repo, getReferenceFromBranch(branch));
 	}
 
 	private findBranch(ref: BranchRef): GitBranch | undefined {

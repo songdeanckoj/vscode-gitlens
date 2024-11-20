@@ -9,14 +9,10 @@ import { createCommandLink } from '../../../../../system/commands';
 import { createWebviewCommandLink } from '../../../../../system/webview';
 import type { GetOverviewBranch, OpenInGraphParams, State } from '../../../../home/protocol';
 import { stateContext } from '../../../home/context';
-import { linkStyles } from '../../shared/components/vscode.css';
-import { branchCardStyles, GlBranchCardBase } from './branch-card';
-import type { Overview, OverviewState } from './overviewState';
-import { overviewStateContext } from './overviewState';
+import type { ActionList } from '../../../shared/components/actions/action-list';
 import '../../../shared/components/button';
-import '../../../shared/components/code-icon';
-import '../../../shared/components/skeleton-loader';
 import '../../../shared/components/card/card';
+import '../../../shared/components/code-icon';
 import '../../../shared/components/commit/commit-stats';
 import '../../../shared/components/menu/menu-item';
 import '../../../shared/components/overlays/popover';
@@ -24,7 +20,12 @@ import '../../../shared/components/overlays/tooltip';
 import '../../../shared/components/pills/tracking';
 import '../../../shared/components/rich/issue-icon';
 import '../../../shared/components/rich/pr-icon';
+import '../../../shared/components/skeleton-loader';
 import '../../shared/components/merge-rebase-status';
+import { linkStyles } from '../../shared/components/vscode.css';
+import { branchCardStyles, GlBranchCardBase } from './branch-card';
+import type { Overview, OverviewState } from './overviewState';
+import { overviewStateContext } from './overviewState';
 
 export const activeWorkTagName = 'gl-active-work';
 
@@ -376,23 +377,23 @@ export class GlActiveBranchCard extends GlBranchCardBase {
 		return [];
 	}
 
-	protected getPrActions() {
+	protected getPrActions(): (typeof ActionList.ItemProps)[] {
 		return [
-			html`<action-item
-				label="Open Pull Request Changes"
-				icon="request-changes"
-				href=${this.createCommandLink('gitlens.home.openPullRequestChanges')}
-			></action-item>`,
-			html`<action-item
-				label="Compare Pull Request"
-				icon="git-compare"
-				href=${this.createCommandLink('gitlens.home.openPullRequestComparison')}
-			></action-item>`,
-			html`<action-item
-				label="Open Pull Request Details"
-				icon="eye"
-				href=${this.createCommandLink('gitlens.home.openPullRequestDetails')}
-			></action-item>`,
+			{
+				label: 'Open Pull Request Changes',
+				icon: 'request-changes',
+				href: this.createCommandLink('gitlens.home.openPullRequestChanges'),
+			},
+			{
+				label: 'Compare Pull Request',
+				icon: 'git-compare',
+				href: this.createCommandLink('gitlens.home.openPullRequestComparison'),
+			},
+			{
+				label: 'Open Pull Request Details',
+				icon: 'eye',
+				href: this.createCommandLink('gitlens.home.openPullRequestDetails'),
+			},
 		];
 	}
 }
