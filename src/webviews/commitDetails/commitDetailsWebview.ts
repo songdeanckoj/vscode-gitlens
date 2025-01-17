@@ -1240,7 +1240,10 @@ export class CommitDetailsWebviewProvider
 			includeRichContent: current.richStateLoaded,
 			autolinkedIssues: current.autolinkedIssues?.map(serializeIssueOrPullRequest),
 			autolinksEnabled: configuration.get('views.commitDetails.autolinks.enabled') ?? false,
-			pullRequest: current.pullRequest != null ? serializePullRequest(current.pullRequest) : undefined,
+			pullRequest:
+				configuration.get('views.commitDetails.autolinks.enabled') && current.pullRequest != null
+					? serializePullRequest(current.pullRequest)
+					: undefined,
 			wip: serializeWipContext(wip),
 			orgSettings: current.orgSettings,
 			inReview: current.inReview,
@@ -1425,6 +1428,7 @@ export class CommitDetailsWebviewProvider
 						configuration.get('views.commitDetails.autolinks.enhanced')
 							? pauseOnCancelOrTimeoutMapTuplePromise(commit.getEnrichedAutolinks(remote))
 							: undefined,
+						configuration.get('views.commitDetails.autolinks.enabled') &&
 						configuration.get('views.commitDetails.pullRequests.enabled')
 							? commit.getAssociatedPullRequest(remote)
 							: undefined,
