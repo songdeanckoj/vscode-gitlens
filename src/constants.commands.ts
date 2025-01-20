@@ -685,6 +685,7 @@ export type TreeViewCommandSuffixesByViewType<T extends TreeViewTypes> = Extract
 >;
 
 type HomeWebviewCommands = `home.${
+	| 'unlinkIssue'
 	| 'openMergeTargetComparison'
 	| 'openPullRequestChanges'
 	| 'openPullRequestComparison'

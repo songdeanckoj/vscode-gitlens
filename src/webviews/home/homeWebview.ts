@@ -26,6 +26,7 @@ import type { Issue } from '../../git/models/issue';
 import type { GitPausedOperationStatus } from '../../git/models/pausedOperationStatus';
 import type { PullRequest } from '../../git/models/pullRequest';
 import { getComparisonRefsForPullRequest } from '../../git/models/pullRequest';
+import type { GitBranchReference } from '../../git/models/reference';
 import { getReferenceFromBranch } from '../../git/models/reference.utils';
 import { RemoteResourceType } from '../../git/models/remoteResource';
 import type { Repository } from '../../git/models/repository';
@@ -68,6 +69,7 @@ import type {
 	GetOverviewResponse,
 	IntegrationState,
 	OpenInGraphParams,
+	OverviewBranchIssue,
 	OverviewFilters,
 	OverviewRecentThreshold,
 	OverviewStaleThreshold,
@@ -312,6 +314,7 @@ export class HomeWebviewProvider implements WebviewProvider<State, State, HomeWe
 			registerCommand('gitlens.home.continuePausedOperation', this.continuePausedOperation, this),
 			registerCommand('gitlens.home.abortPausedOperation', this.abortPausedOperation, this),
 			registerCommand('gitlens.home.openRebaseEditor', this.openRebaseEditor, this),
+			registerCommand('gitlens.home.unlinkIssue', this.unlinkIssue, this),
 		];
 	}
 
@@ -502,6 +505,35 @@ export class HomeWebviewProvider implements WebviewProvider<State, State, HomeWe
 		void executeCoreCommand('vscode.openWith', rebaseTodoUri, 'gitlens.rebase', {
 			preview: false,
 		});
+	}
+
+	private async unlinkIssue({ issue, reference }: { reference: GitBranchReference; issue: OverviewBranchIssue }) {
+		const skipPrompt = this.container.storage.get('autolinks:branches:ignore:skipPrompt') || undefined;
+		const item =
+			skipPrompt ??
+			(await window.showWarningMessage(
+				`This action will unlink the issue ${issue.url} from the branch ${reference.name} forever`,
+				{
+					modal: true,
+				},
+				`OK`,
+				`OK, Don't ask again`,
+			));
+		if (!item) {
+			return;
+		}
+		if (item === `OK, Don't ask again`) {
+			void this.container.storage.store('autolinks:branches:ignore:skipPrompt', true);
+		}
+		const prev = this.container.storage.get('autolinks:branches:ignore') ?? {};
+		const refId = reference.id ?? `${reference.repoPath}/${reference.remote}/${reference.ref}`;
+		await this.container.storage
+			.store('autolinks:branches:ignore', {
+				...prev,
+				[refId]: [...(prev[refId] ?? []), issue.url],
+			})
+			.catch();
+		void this.host.notify(DidChangeRepositoryWip, undefined);
 	}
 
 	private async createCloudPatch(ref: BranchRef) {
@@ -1192,12 +1224,13 @@ function getOverviewBranches(
 		const wt = worktreesByBranch.get(branch.id);
 		const worktree: GetOverviewBranch['worktree'] = wt ? { name: wt.name, uri: wt.uri.toString() } : undefined;
 
+		const ignored = container.storage.get('autolinks:branches:ignore')?.[branch.id];
 		const timestamp = branch.date?.getTime();
 		if (branch.current || wt?.opened) {
 			const forceOptions = options?.forceActive ? { force: true } : undefined;
 			if (options?.isPro !== false) {
 				prPromises.set(branch.id, getPullRequestInfo(container, branch, launchpadPromise));
-				autolinkPromises.set(branch.id, branch.getEnrichedAutolinks());
+				autolinkPromises.set(branch.id, branch.getEnrichedAutolinks(ignored));
 				issuePromises.set(
 					branch.id,
 					getAssociatedIssuesForBranch(container, branch).then(issues => issues.value),
@@ -1239,7 +1272,7 @@ function getOverviewBranches(
 		if (timestamp != null && timestamp > recentThreshold) {
 			if (options?.isPro !== false) {
 				prPromises.set(branch.id, getPullRequestInfo(container, branch, launchpadPromise));
-				autolinkPromises.set(branch.id, branch.getEnrichedAutolinks());
+				autolinkPromises.set(branch.id, branch.getEnrichedAutolinks(ignored));
 				issuePromises.set(
 					branch.id,
 					getAssociatedIssuesForBranch(container, branch).then(issues => issues.value),
@@ -1288,7 +1321,8 @@ function getOverviewBranches(
 			}
 
 			if (options?.isPro !== false) {
-				autolinkPromises.set(branch.id, branch.getEnrichedAutolinks());
+				const ignored = container.storage.get('autolinks:branches:ignore')?.[branch.id];
+				autolinkPromises.set(branch.id, branch.getEnrichedAutolinks(ignored));
 				issuePromises.set(
 					branch.id,
 					getAssociatedIssuesForBranch(container, branch).then(issues => issues.value),
@@ -1406,6 +1440,8 @@ async function getAutolinkIssuesInfo(links: Map<string, EnrichedAutolink> | unde
 				title: issue.title,
 				url: issue.url,
 				state: issue.state,
+				type: issue.type,
+				isAutolink: true,
 			};
 		}),
 	);

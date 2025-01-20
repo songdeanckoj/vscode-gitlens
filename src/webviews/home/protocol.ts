@@ -1,7 +1,7 @@
 import type { IntegrationDescriptor } from '../../constants.integrations';
 import type { GitBranchMergedStatus } from '../../git/gitProvider';
 import type { GitBranchStatus, GitTrackingState } from '../../git/models/branch';
-import type { Issue } from '../../git/models/issue';
+import type { Issue, IssueOrPullRequestType } from '../../git/models/issue';
 import type { MergeConflict } from '../../git/models/mergeConflict';
 import type { GitPausedOperationStatus } from '../../git/models/pausedOperationStatus';
 import type { GitBranchReference } from '../../git/models/reference';
@@ -65,6 +65,14 @@ export const GetLaunchpadSummary = new IpcRequest<GetLaunchpadSummaryRequest, Ge
 
 export interface GetOverviewRequest {
 	[key: string]: unknown;
+}
+
+export interface OverviewBranchIssue {
+	id: string;
+	title: string;
+	url: string;
+	state: Omit<Issue['state'], 'merged'>;
+	isAutolink?: boolean;
 }
 
 export interface GetOverviewBranch {
@@ -166,23 +174,9 @@ export interface GetOverviewBranch {
 		| undefined
 	>;
 
-	autolinks?: Promise<
-		{
-			id: string;
-			title: string;
-			url: string;
-			state: Omit<Issue['state'], 'merged'>;
-		}[]
-	>;
+	autolinks?: Promise<(OverviewBranchIssue & { type: IssueOrPullRequestType })[]>;
 
-	issues?: Promise<
-		{
-			id: string;
-			title: string;
-			url: string;
-			state: Omit<Issue['state'], 'merged'>;
-		}[]
-	>;
+	issues?: Promise<OverviewBranchIssue[]>;
 
 	worktree?: {
 		name: string;
