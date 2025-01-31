@@ -71,25 +71,8 @@ export function findOrOpenEditors(uris: Uri[], options?: TextDocumentShowOptions
 }
 
 export function getEditorCommand(): string {
-	let editor;
-	switch (env.appName) {
-		case 'Visual Studio Code - Insiders':
-			editor = 'code-insiders --wait --reuse-window';
-			break;
-		case 'Visual Studio Code - Exploration':
-			editor = 'code-exploration --wait --reuse-window';
-			break;
-		case 'VSCodium':
-			editor = 'codium --wait --reuse-window';
-			break;
-		case 'Cursor':
-			editor = 'cursor --wait --reuse-window';
-			break;
-		default:
-			editor = 'code --wait --reuse-window';
-			break;
-	}
-	return editor;
+	const escapedExecPath = `${env.appRoot}/bin/code`.replace(/([ ()])/gm, '\\$1');
+	return `${escapedExecPath} --wait --reuse-window`;
 }
 
 export function getEditorIfActive(document: TextDocument): TextEditor | undefined {
